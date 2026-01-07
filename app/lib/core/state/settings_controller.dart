@@ -11,7 +11,7 @@ class SettingsController extends ChangeNotifier {
 
   final StorageService _storage;
 
-  String _baseUrl = 'https://api.shamsprojects.com';
+  String _baseUrl = 'https://www.shamsprojects.com/api/public';
   ThemeMode _themeMode = ThemeMode.light;
   bool _isLoading = true;
 

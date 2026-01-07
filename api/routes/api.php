@@ -14,6 +14,7 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:sanctum', 'company.context'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('me', [AuthController::class, 'me']);
+        Route::post('auth/change-password', [AuthController::class, 'changePassword']);
 
         Route::get('dashboard/kpis', [DashboardController::class, 'kpis']);
 
