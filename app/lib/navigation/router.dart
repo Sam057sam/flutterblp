@@ -6,6 +6,7 @@ import '../features/customers/customers_page.dart';
 import '../features/dashboard/dashboard_page.dart';
 import '../features/placeholders/placeholder_page.dart';
 import '../features/products/products_page.dart';
+import '../features/company/company_page.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/dashboard',
@@ -237,10 +238,7 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/operations/company',
-          builder: (context, state) => const PlaceholderPage(
-            title: 'Company Profile',
-            breadcrumbs: 'Operations / Company',
-          ),
+          builder: (context, state) => const CompanyPage(),
         ),
         GoRoute(
           path: '/operations/exports',
