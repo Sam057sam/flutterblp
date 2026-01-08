@@ -70,12 +70,8 @@ class AdaptiveScaffold extends ConsumerWidget {
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                         child: GlassTopBar(
                           breadcrumbs: breadcrumbs,
-                          onToggleSidebar: () => ref
-                              .read(sidebarCollapsedProvider.notifier)
-                              .state = !ref.read(sidebarCollapsedProvider),
-                          onToggleRightPanel: () => ref
-                              .read(rightPanelOpenProvider.notifier)
-                              .state = !rightPanelOpen,
+                          onToggleSidebar: () => ref.read(sidebarCollapsedProvider.notifier).toggle(),
+                          onToggleRightPanel: () => ref.read(rightPanelOpenProvider.notifier).toggle(),
                         ),
                       ),
                     if (isMobile)
