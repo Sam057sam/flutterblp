@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CustomerController;
+use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\MediaController;
 use App\Http\Controllers\Api\V1\PlaceholderController;
@@ -20,6 +21,9 @@ Route::prefix('v1')->group(function () {
 
         Route::apiResource('customers', CustomerController::class);
         Route::apiResource('products', ProductController::class);
+
+        Route::apiResource('companies', CompanyController::class);
+        Route::post('companies/{company}/upload', [CompanyController::class, 'upload']);
 
         Route::post('media/upload', [MediaController::class, 'upload']);
 
