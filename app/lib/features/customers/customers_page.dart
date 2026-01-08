@@ -1,223 +1,311 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api/dio_provider.dart';
-import '../../core/models/customer.dart';
+import '../../shared/widgets/glass_card.dart';
+import '../../shared/widgets/glass_surface.dart';
+import '../../shared/widgets/page_header.dart';
+import '../../shared/widgets/status_chip.dart';
 
-class CustomersPage extends ConsumerStatefulWidget {
+class CustomersPage extends StatelessWidget {
   const CustomersPage({super.key});
 
   @override
-  ConsumerState<CustomersPage> createState() => _CustomersPageState();
-}
-
-class _CustomersPageState extends ConsumerState<CustomersPage> {
-  late Future<List<Customer>> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _load();
-  }
-
-  Future<List<Customer>> _load() async {
-    final dio = ref.read(dioProvider);
-    final response = await dio.get('/api/v1/customers');
-    final data = response.data['data'] as List? ?? [];
-    return data.map((item) => Customer.fromJson(item)).toList();
-  }
-
-  Future<void> _openForm({Customer? customer}) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => _CustomerFormDialog(customer: customer),
-    );
-
-    if (result == true) {
-      setState(() {
-        _future = _load();
-      });
-    }
-  }
-
-  Future<void> _delete(Customer customer) async {
-    final dio = ref.read(dioProvider);
-    await dio.delete('/api/v1/customers/${customer.id}');
-    setState(() {
-      _future = _load();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text(
-              'Customers',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const Spacer(),
-            ElevatedButton.icon(
-              onPressed: () => _openForm(),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PageHeader(
+            title: 'Customers',
+            breadcrumbs: 'Sales / Customers',
+            trailing: ElevatedButton.icon(
+              onPressed: () => _openCustomerForm(context),
               icon: const Icon(Icons.add),
               label: const Text('Add Customer'),
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: FutureBuilder<List<Customer>>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return const Center(child: Text('Failed to load customers.'));
-              }
-
-              final customers = snapshot.data ?? [];
-              if (customers.isEmpty) {
-                return const Center(child: Text('No customers yet.'));
-              }
-
-              return ListView.separated(
-                itemCount: customers.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final customer = customers[index];
-                  return ListTile(
-                    title: Text(customer.name),
-                    subtitle: Text(customer.email ?? 'No email'),
-                    trailing: Wrap(
-                      spacing: 8,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _openForm(customer: customer),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () => _delete(customer),
-                        ),
-                      ],
+            filters: Row(
+              children: [
+                const Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search customers, tags, or email',
+                      prefixIcon: Icon(Icons.search),
                     ),
-                  );
-                },
-              );
-            },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                DropdownButtonFormField<String>(
+                  value: 'Active',
+                  decoration: const InputDecoration(labelText: 'Status'),
+                  items: const [
+                    DropdownMenuItem(value: 'Active', child: Text('Active')),
+                    DropdownMenuItem(value: 'Inactive', child: Text('Inactive')),
+                  ],
+                  onChanged: (_) {},
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.filter_alt),
+                  label: const Text('More filters'),
+                ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 24),
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Customer Directory',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                _TableHeader(),
+                const Divider(height: 1),
+                for (final customer in _demoCustomers)
+                  _CustomerRow(
+                    customer: customer,
+                    onEdit: () => _openCustomerForm(context),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _EmptyState(),
+        ],
+      ),
+    );
+  }
+}
+
+class _TableHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: const [
+        Expanded(child: Text('Customer', style: TextStyle(color: Color(0xFF64748B)))),
+        Expanded(child: Text('Contact', style: TextStyle(color: Color(0xFF64748B)))),
+        Expanded(child: Text('Credit', style: TextStyle(color: Color(0xFF64748B)))),
+        Expanded(child: Text('Status', style: TextStyle(color: Color(0xFF64748B)))),
+        SizedBox(width: 72),
       ],
     );
   }
 }
 
-class _CustomerFormDialog extends ConsumerStatefulWidget {
-  const _CustomerFormDialog({this.customer});
+class _CustomerRow extends StatelessWidget {
+  const _CustomerRow({required this.customer, required this.onEdit});
 
-  final Customer? customer;
-
-  @override
-  ConsumerState<_CustomerFormDialog> createState() => _CustomerFormDialogState();
-}
-
-class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    final customer = widget.customer;
-    if (customer != null) {
-      _nameController.text = customer.name;
-      _emailController.text = customer.email ?? '';
-      _phoneController.text = customer.phone ?? '';
-      _addressController.text = customer.address ?? '';
-    }
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _addressController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final dio = ref.read(dioProvider);
-    final payload = {
-      'name': _nameController.text,
-      'email': _emailController.text,
-      'phone': _phoneController.text,
-      'address': _addressController.text,
-    };
-
-    if (widget.customer == null) {
-      await dio.post('/api/v1/customers', data: payload);
-    } else {
-      await dio.put('/api/v1/customers/${widget.customer!.id}', data: payload);
-    }
-
-    if (mounted) Navigator.of(context).pop(true);
-  }
+  final _Customer customer;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.customer == null ? 'Add Customer' : 'Edit Customer'),
-      content: SizedBox(
-        width: 400,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Name is required'
-                    : null,
-              ),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-              ),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Phone'),
-              ),
-              TextFormField(
-                controller: _addressController,
-                decoration: const InputDecoration(labelText: 'Address'),
-              ),
-            ],
-          ),
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _save,
-          child: const Text('Save'),
-        ),
-      ],
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(customer.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(customer.company, style: const TextStyle(color: Color(0xFF64748B))),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(customer.email),
+                const SizedBox(height: 4),
+                Text(customer.phone, style: const TextStyle(color: Color(0xFF64748B))),
+              ],
+            ),
+          ),
+          Expanded(child: Text(customer.credit)),
+          Expanded(child: StatusChip(label: customer.status, color: customer.statusColor)),
+          IconButton(icon: const Icon(Icons.edit), onPressed: onEdit),
+        ],
+      ),
     );
   }
 }
+
+class _EmptyState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      child: Column(
+        children: [
+          Container(
+            height: 140,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Center(
+              child: Icon(Icons.people_alt_outlined, size: 56, color: Color(0xFF94A3B8)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No customer segments configured',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text('Create segments to track loyalty, location, and lifetime value.'),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.add),
+            label: const Text('Create segment'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+void _openCustomerForm(BuildContext context) {
+  final width = MediaQuery.of(context).size.width;
+  if (width < 720) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _CustomerFormSheet(isFullScreen: true),
+    );
+  } else {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black26,
+      builder: (context) => const Align(
+        alignment: Alignment.centerRight,
+        child: SizedBox(width: 460, child: _CustomerFormSheet()),
+      ),
+    );
+  }
+}
+
+class _CustomerFormSheet extends StatelessWidget {
+  const _CustomerFormSheet({this.isFullScreen = false});
+
+  final bool isFullScreen;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = GlassSurface(
+      borderRadius: isFullScreen ? 28 : 24,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Add Customer',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const TextField(decoration: InputDecoration(labelText: 'Customer name')),
+          const SizedBox(height: 12),
+          const TextField(decoration: InputDecoration(labelText: 'Company')),
+          const SizedBox(height: 12),
+          const TextField(decoration: InputDecoration(labelText: 'Email')),
+          const SizedBox(height: 12),
+          const TextField(decoration: InputDecoration(labelText: 'Phone')),
+          const SizedBox(height: 12),
+          const TextField(decoration: InputDecoration(labelText: 'Billing address')),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              OutlinedButton(onPressed: () {}, child: const Text('Save draft')),
+              const SizedBox(width: 12),
+              ElevatedButton(onPressed: () {}, child: const Text('Save customer')),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (!isFullScreen) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.only(right: 24, top: 40, bottom: 40),
+        child: content,
+      );
+    }
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: content,
+      ),
+    );
+  }
+}
+
+class _Customer {
+  const _Customer({
+    required this.name,
+    required this.company,
+    required this.email,
+    required this.phone,
+    required this.credit,
+    required this.status,
+    required this.statusColor,
+  });
+
+  final String name;
+  final String company;
+  final String email;
+  final String phone;
+  final String credit;
+  final String status;
+  final Color statusColor;
+}
+
+const _demoCustomers = [
+  _Customer(
+    name: 'Sana Sheikh',
+    company: 'Atlas Trading',
+    email: 'sana@atlas.com',
+    phone: '+971 55 210 7751',
+    credit: 'AED 120,000',
+    status: 'Active',
+    statusColor: Color(0xFF10B981),
+  ),
+  _Customer(
+    name: 'Omar Ali',
+    company: 'Nova Retail',
+    email: 'omar@nova.com',
+    phone: '+971 50 885 1173',
+    credit: 'AED 44,000',
+    status: 'Review',
+    statusColor: Color(0xFFF59E0B),
+  ),
+  _Customer(
+    name: 'Fatima Noor',
+    company: 'Delta Export',
+    email: 'fatima@delta.com',
+    phone: '+971 54 110 9055',
+    credit: 'AED 210,000',
+    status: 'Priority',
+    statusColor: Color(0xFF3B82F6),
+  ),
+];

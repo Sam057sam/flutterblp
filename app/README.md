@@ -1,16 +1,31 @@
-# shams_erp
+# Shams ERP UI (Flutter)
 
-A new Flutter project.
+Modern ERP UI shell built with Material 3 and glassmorphism.
 
-## Getting Started
+## Run
 
-This project is a starting point for a Flutter application.
+```bash
+flutter pub get
+flutter run -d chrome
+```
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+flutter run -d windows
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+flutter run -d android
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Build Web
+
+```bash
+flutter build web --release --base-href /app/
+```
+
+## Structure
+- lib/app_shell/
+- lib/navigation/
+- lib/theme/
+- lib/shared/widgets/
+- lib/features/

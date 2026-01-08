@@ -1,242 +1,284 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api/dio_provider.dart';
-import '../../core/models/product.dart';
+import '../../shared/widgets/glass_card.dart';
+import '../../shared/widgets/glass_surface.dart';
+import '../../shared/widgets/page_header.dart';
+import '../../shared/widgets/status_chip.dart';
 
-class ProductsPage extends ConsumerStatefulWidget {
+class ProductsPage extends StatelessWidget {
   const ProductsPage({super.key});
 
   @override
-  ConsumerState<ProductsPage> createState() => _ProductsPageState();
-}
-
-class _ProductsPageState extends ConsumerState<ProductsPage> {
-  late Future<List<Product>> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _load();
-  }
-
-  Future<List<Product>> _load() async {
-    final dio = ref.read(dioProvider);
-    final response = await dio.get('/api/v1/products');
-    final data = response.data['data'] as List? ?? [];
-    return data.map((item) => Product.fromJson(item)).toList();
-  }
-
-  Future<void> _openForm({Product? product}) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => _ProductFormDialog(product: product),
-    );
-
-    if (result == true) {
-      setState(() {
-        _future = _load();
-      });
-    }
-  }
-
-  Future<void> _delete(Product product) async {
-    final dio = ref.read(dioProvider);
-    await dio.delete('/api/v1/products/${product.id}');
-    setState(() {
-      _future = _load();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text(
-              'Products',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const Spacer(),
-            ElevatedButton.icon(
-              onPressed: () => _openForm(),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PageHeader(
+            title: 'Products',
+            breadcrumbs: 'Inventory / Products',
+            trailing: ElevatedButton.icon(
+              onPressed: () => _openProductForm(context),
               icon: const Icon(Icons.add),
               label: const Text('Add Product'),
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: FutureBuilder<List<Product>>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return const Center(child: Text('Failed to load products.'));
-              }
-
-              final products = snapshot.data ?? [];
-              if (products.isEmpty) {
-                return const Center(child: Text('No products yet.'));
-              }
-
-              return ListView.separated(
-                itemCount: products.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final product = products[index];
-                  return ListTile(
-                    title: Text(product.name),
-                    subtitle: Text(product.sku ?? 'No SKU'),
-                    trailing: Wrap(
-                      spacing: 8,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _openForm(product: product),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () => _delete(product),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
+            filters: Row(
+              children: [
+                DropdownButtonFormField<String>(
+                  value: 'All Categories',
+                  decoration: const InputDecoration(labelText: 'Category'),
+                  items: const [
+                    DropdownMenuItem(value: 'All Categories', child: Text('All Categories')),
+                    DropdownMenuItem(value: 'Office', child: Text('Office')),
+                    DropdownMenuItem(value: 'Electronics', child: Text('Electronics')),
+                  ],
+                  onChanged: (_) {},
+                ),
+                const SizedBox(width: 12),
+                DropdownButtonFormField<String>(
+                  value: 'All Brands',
+                  decoration: const InputDecoration(labelText: 'Brand'),
+                  items: const [
+                    DropdownMenuItem(value: 'All Brands', child: Text('All Brands')),
+                    DropdownMenuItem(value: 'Canon', child: Text('Canon')),
+                    DropdownMenuItem(value: 'HP', child: Text('HP')),
+                  ],
+                  onChanged: (_) {},
+                ),
+                const SizedBox(width: 12),
+                DropdownButtonFormField<String>(
+                  value: 'Main Warehouse',
+                  decoration: const InputDecoration(labelText: 'Warehouse'),
+                  items: const [
+                    DropdownMenuItem(value: 'Main Warehouse', child: Text('Main Warehouse')),
+                    DropdownMenuItem(value: 'Dubai', child: Text('Dubai')),
+                  ],
+                  onChanged: (_) {},
+                ),
+                const SizedBox(width: 12),
+                DropdownButtonFormField<String>(
+                  value: 'All Stock',
+                  decoration: const InputDecoration(labelText: 'Stock Status'),
+                  items: const [
+                    DropdownMenuItem(value: 'All Stock', child: Text('All Stock')),
+                    DropdownMenuItem(value: 'Low', child: Text('Low')),
+                    DropdownMenuItem(value: 'Reorder', child: Text('Reorder')),
+                  ],
+                  onChanged: (_) {},
+                ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 24),
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Inventory Catalog',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                _TableHeader(),
+                const Divider(height: 1),
+                for (final product in _demoProducts)
+                  _ProductRow(product: product, onEdit: () => _openProductForm(context)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TableHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: const [
+        Expanded(child: Text('Product', style: TextStyle(color: Color(0xFF64748B)))),
+        Expanded(child: Text('SKU', style: TextStyle(color: Color(0xFF64748B)))),
+        Expanded(child: Text('Stock', style: TextStyle(color: Color(0xFF64748B)))),
+        Expanded(child: Text('Warehouse', style: TextStyle(color: Color(0xFF64748B)))),
+        Expanded(child: Text('Status', style: TextStyle(color: Color(0xFF64748B)))),
+        SizedBox(width: 72),
       ],
     );
   }
 }
 
-class _ProductFormDialog extends ConsumerStatefulWidget {
-  const _ProductFormDialog({this.product});
+class _ProductRow extends StatelessWidget {
+  const _ProductRow({required this.product, required this.onEdit});
 
-  final Product? product;
-
-  @override
-  ConsumerState<_ProductFormDialog> createState() => _ProductFormDialogState();
-}
-
-class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _skuController = TextEditingController();
-  final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _costController = TextEditingController();
-  final _stockController = TextEditingController();
-  final _unitController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    final product = widget.product;
-    if (product != null) {
-      _skuController.text = product.sku ?? '';
-      _nameController.text = product.name;
-      _priceController.text = product.price?.toString() ?? '';
-      _costController.text = product.cost?.toString() ?? '';
-      _stockController.text = product.stock?.toString() ?? '';
-      _unitController.text = product.unit ?? '';
-    }
-  }
-
-  @override
-  void dispose() {
-    _skuController.dispose();
-    _nameController.dispose();
-    _priceController.dispose();
-    _costController.dispose();
-    _stockController.dispose();
-    _unitController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final dio = ref.read(dioProvider);
-    final payload = {
-      'sku': _skuController.text,
-      'name': _nameController.text,
-      'price': _priceController.text,
-      'cost': _costController.text,
-      'stock': _stockController.text,
-      'unit': _unitController.text,
-    };
-
-    if (widget.product == null) {
-      await dio.post('/api/v1/products', data: payload);
-    } else {
-      await dio.put('/api/v1/products/${widget.product!.id}', data: payload);
-    }
-
-    if (mounted) Navigator.of(context).pop(true);
-  }
+  final _Product product;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
-      content: SizedBox(
-        width: 400,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _skuController,
-                decoration: const InputDecoration(labelText: 'SKU'),
-              ),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Name is required'
-                    : null,
-              ),
-              TextFormField(
-                controller: _priceController,
-                decoration: const InputDecoration(labelText: 'Price'),
-                keyboardType: TextInputType.number,
-              ),
-              TextFormField(
-                controller: _costController,
-                decoration: const InputDecoration(labelText: 'Cost'),
-                keyboardType: TextInputType.number,
-              ),
-              TextFormField(
-                controller: _stockController,
-                decoration: const InputDecoration(labelText: 'Stock'),
-                keyboardType: TextInputType.number,
-              ),
-              TextFormField(
-                controller: _unitController,
-                decoration: const InputDecoration(labelText: 'Unit'),
-              ),
-            ],
-          ),
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _save,
-          child: const Text('Save'),
-        ),
-      ],
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(product.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(product.category, style: const TextStyle(color: Color(0xFF64748B))),
+              ],
+            ),
+          ),
+          Expanded(child: Text(product.sku)),
+          Expanded(child: Text(product.stock)),
+          Expanded(child: Text(product.warehouse)),
+          Expanded(child: StatusChip(label: product.status, color: product.statusColor)),
+          IconButton(icon: const Icon(Icons.edit), onPressed: onEdit),
+        ],
+      ),
     );
   }
 }
+
+void _openProductForm(BuildContext context) {
+  final width = MediaQuery.of(context).size.width;
+  if (width < 720) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _ProductFormSheet(isFullScreen: true),
+    );
+  } else {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black26,
+      builder: (context) => const Align(
+        alignment: Alignment.centerRight,
+        child: SizedBox(width: 460, child: _ProductFormSheet()),
+      ),
+    );
+  }
+}
+
+class _ProductFormSheet extends StatelessWidget {
+  const _ProductFormSheet({this.isFullScreen = false});
+
+  final bool isFullScreen;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = GlassSurface(
+      borderRadius: isFullScreen ? 28 : 24,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Add Product',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const TextField(decoration: InputDecoration(labelText: 'Product name')),
+          const SizedBox(height: 12),
+          const TextField(decoration: InputDecoration(labelText: 'SKU')),
+          const SizedBox(height: 12),
+          const TextField(decoration: InputDecoration(labelText: 'Category')),
+          const SizedBox(height: 12),
+          const TextField(decoration: InputDecoration(labelText: 'Brand')),
+          const SizedBox(height: 12),
+          const TextField(decoration: InputDecoration(labelText: 'Unit price')),
+          const SizedBox(height: 12),
+          const TextField(decoration: InputDecoration(labelText: 'Reorder level')),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              OutlinedButton(onPressed: () {}, child: const Text('Save draft')),
+              const SizedBox(width: 12),
+              ElevatedButton(onPressed: () {}, child: const Text('Save product')),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (!isFullScreen) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.only(right: 24, top: 40, bottom: 40),
+        child: content,
+      );
+    }
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: content,
+      ),
+    );
+  }
+}
+
+class _Product {
+  const _Product({
+    required this.name,
+    required this.category,
+    required this.sku,
+    required this.stock,
+    required this.warehouse,
+    required this.status,
+    required this.statusColor,
+  });
+
+  final String name;
+  final String category;
+  final String sku;
+  final String stock;
+  final String warehouse;
+  final String status;
+  final Color statusColor;
+}
+
+const _demoProducts = [
+  _Product(
+    name: 'Laser Printer',
+    category: 'Electronics',
+    sku: 'PR-2201',
+    stock: '42 units',
+    warehouse: 'Main Warehouse',
+    status: 'Healthy',
+    statusColor: Color(0xFF10B981),
+  ),
+  _Product(
+    name: 'Packaging Boxes',
+    category: 'Logistics',
+    sku: 'BX-1190',
+    stock: '12 units',
+    warehouse: 'Dubai',
+    status: 'Reorder',
+    statusColor: Color(0xFFEF4444),
+  ),
+  _Product(
+    name: 'Copy Paper A4',
+    category: 'Office',
+    sku: 'OF-3302',
+    stock: '24 packs',
+    warehouse: 'Main Warehouse',
+    status: 'Low',
+    statusColor: Color(0xFFF59E0B),
+  ),
+];

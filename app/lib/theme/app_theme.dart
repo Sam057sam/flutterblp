@@ -4,45 +4,52 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTheme {
   static ThemeData light() {
     final base = ThemeData.light(useMaterial3: true);
-    final textTheme = GoogleFonts.spaceGroteskTextTheme(base.textTheme);
+    final textTheme = GoogleFonts.manropeTextTheme(base.textTheme);
 
     return base.copyWith(
       textTheme: textTheme,
       colorScheme: const ColorScheme.light(
-        primary: Color(0xFF0F766E),
-        secondary: Color(0xFFF59E0B),
+        primary: Color(0xFF2563EB),
+        secondary: Color(0xFF10B981),
         surface: Color(0xFFF8FAFC),
+        onSurface: Color(0xFF0F172A),
         onPrimary: Colors.white,
-        onSecondary: Colors.black,
+        onSecondary: Colors.white,
       ),
-      scaffoldBackgroundColor: const Color(0xFFF3F4F6),
+      scaffoldBackgroundColor: const Color(0xFFF1F5F9),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFFF8FAFC),
-        foregroundColor: Color(0xFF0F172A),
+        backgroundColor: Colors.transparent,
         elevation: 0,
+      ),
+      cardTheme: CardTheme(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
+        color: Colors.white.withOpacity(0.65),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.7),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.4),
+        ),
       ),
     );
   }
+}
 
-  static ThemeData dark() {
-    final base = ThemeData.dark(useMaterial3: true);
-    final textTheme = GoogleFonts.spaceGroteskTextTheme(base.textTheme);
-
-    return base.copyWith(
-      textTheme: textTheme,
-      colorScheme: const ColorScheme.dark(
-        primary: Color(0xFF14B8A6),
-        secondary: Color(0xFFFBBF24),
-        surface: Color(0xFF0F172A),
-        onPrimary: Colors.black,
-        onSecondary: Colors.black,
-      ),
-      scaffoldBackgroundColor: const Color(0xFF0B1120),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-    );
-  }
+class AppGlassColors {
+  static const Color glassTint = Color(0xB3FFFFFF);
+  static const Color glassBorder = Color(0x66FFFFFF);
+  static const Color glassShadow = Color(0x1A0F172A);
+  static const Color gradientStart = Color(0xFFEFF6FF);
+  static const Color gradientEnd = Color(0xFFF8FAFC);
 }
